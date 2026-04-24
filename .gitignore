@@ -1,0 +1,31 @@
+# Python bytecode and cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Environments (Pipenv & Venv)
+.venv/
+venv/
+ENV/
+.env
+.python-version
+Pipfile.lock
+
+# Data and Logs (CRITICAL)
+data/
+*.csv
+*.parquet
+*.json
+*.log
+*.target
+
+# IDE specific
+.vscode/
+.idea/
+.DS_Store
+
+# Spark/Hadoop specific
+derby.log
+metastore_db/
+spark-warehouse/
