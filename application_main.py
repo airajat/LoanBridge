@@ -1,6 +1,6 @@
 import sys
 from lib import DataManipulation, DataReader, Utils
-import logger
+from logger import Log4j
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
