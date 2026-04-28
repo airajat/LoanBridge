@@ -1,4 +1,4 @@
-from lib.ConfigReader import get_app_config
+from lib.configReader import get_app_config
 
 def read_customers(spark, env):
     conf = get_app_config(env)

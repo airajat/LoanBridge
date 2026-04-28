@@ -1,5 +1,5 @@
 import sys
-from lib import DataManipulation, DataReader, Utils
+from lib import dataManipulation, dataReader, utils
 from logger import Log4j
 
 if __name__ == '__main__':
@@ -10,17 +10,17 @@ if __name__ == '__main__':
     job_run_env = sys.argv[1].upper()
     
     # 1. Spark Session & Logging
-    spark = Utils.get_spark_session(job_run_env)
+    spark = utils.get_spark_session(job_run_env)
     logger = Log4j(spark)
     logger.info(f"Starting LoanBridge Customer Cleaning in {job_run_env}")
 
     # 2. Extract
     logger.info("Reading raw customer data from HDFS...")
-    raw_customers_df = DataReader.read_customers(spark, job_run_env)
+    raw_customers_df = dataReader.read_customers(spark, job_run_env)
 
     # 3. Transform
     logger.info("Applying data cleaning transformations...")
-    cleaned_customers_df = DataManipulation.clean_customer_data(raw_customers_df)
+    cleaned_customers_df = dataManipulation.clean_customer_data(raw_customers_df)
 
     # 4. Load
     logger.info("Writing cleaned data to Silver zone in Parquet format...")

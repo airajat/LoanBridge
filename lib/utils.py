@@ -4,8 +4,7 @@ import getpass
 def get_spark_session(env):
     username = getpass.getuser()
 
-    if env == "DEV":
-        # Local or small-scale testing
+    if env == "LOCAL":
         master = "local[*]"
     else:
         # Cluster mode

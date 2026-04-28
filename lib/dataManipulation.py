@@ -1,6 +1,6 @@
 from pyspark.sql.functions import current_timestamp, regexp_replace, col, when, length, floor, avg
 
-def clean_customers(df):
+def clean_customer_data(df):
     # 1. Rename columns
     renamed_df = df.withColumnRenamed("annual_inc", "annual_income") \
         .withColumnRenamed("addr_state", "address_state") \
