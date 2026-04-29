@@ -5,6 +5,7 @@ name = "pypi"
 
 [packages]
 pyspark = "*"
+pytest = "*"
 
 [dev-packages]
 
