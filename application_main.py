@@ -1,5 +1,5 @@
 import sys
-from lib import dataManipulation, dataReader, utils, ConfigReader
+from lib import dataManipulation, dataReader, utils, configReader
 from logger import Log4j
 
 if __name__ == '__main__':
@@ -10,7 +10,7 @@ if __name__ == '__main__':
     job_run_env = sys.argv[1].upper()
     
     # Load App Configs
-    app_conf = ConfigReader.get_app_config(job_run_env)
+    app_conf = configReader.get_app_config(job_run_env)
     
     # Initialize Spark
     spark = utils.get_spark_session(job_run_env)
