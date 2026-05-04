@@ -1,11 +1,11 @@
 from pyspark.sql import SparkSession
 from pyspark import SparkConf
-from lib import ConfigReader
+from lib import configReader
 import getpass
 
 def get_spark_session(env):
     username = getpass.getuser()
-    conf_dict = ConfigReader.get_pyspark_config(env)
+    conf_dict = configReader.get_pyspark_config(env)
     
     spark_conf = SparkConf()
     for key, val in conf_dict.items():
