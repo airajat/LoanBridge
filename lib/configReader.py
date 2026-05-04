@@ -1,26 +1,27 @@
 import configparser
-from pyspark import SparkConf
+import os
 
 def get_app_config(env):
-    """
-    Reads application.conf and returns a dictionary of settings 
-    for the specific environment.
-    """
     config = configparser.ConfigParser()
-    config.read("configs/application.conf")
+    if os.path.exists("application.conf"):
+        config.read("application.conf")
+    elif os.path.exists("configs/application.conf"):
+        config.read("configs/application.conf")
+    
     app_conf = {}
     for (key, val) in config.items(env):
         app_conf[key] = val
     return app_conf
 
 def get_pyspark_config(env):
-    """
-    Reads pyspark.conf and returns a SparkConf object 
-    to be used during SparkSession creation.
-    """
     config = configparser.ConfigParser()
-    config.read("configs/pyspark.conf")
-    pyspark_conf = SparkConf()
+    if os.path.exists("pyspark.conf"):
+        config.read("pyspark.conf")
+    elif os.path.exists("configs/pyspark.conf"):
+        config.read("configs/pyspark.conf")
+    
+    # Returning a dictionary is cleaner for the utils.py loop
+    pyspark_conf = {}
     for (key, val) in config.items(env):
-        pyspark_conf.set(key, val)
+        pyspark_conf[key] = val
     return pyspark_conf

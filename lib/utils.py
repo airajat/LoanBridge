@@ -1,20 +1,24 @@
 from pyspark.sql import SparkSession
+from pyspark import SparkConf
+from lib import ConfigReader
 import getpass
 
 def get_spark_session(env):
     username = getpass.getuser()
-
-    if env == "LOCAL":
-        master = "local[*]"
+    conf_dict = ConfigReader.get_pyspark_config(env)
+    
+    spark_conf = SparkConf()
+    for key, val in conf_dict.items():
+        spark_conf.set(key, val)
+    
+    # Environment-specific dynamic overrides
+    if env != "LOCAL":
+        spark_conf.set("spark.sql.warehouse.dir", f"/user/{username}/warehouse")
+        spark_conf.set("spark.ui.port", "0")
     else:
-        # Cluster mode
-        master = "yarn"
+        spark_conf.set("spark.driver.bindAddress", "127.0.0.1")
 
     return SparkSession.builder \
-        .appName(f"LoanBridge_{username}") \
-        .master(master) \
-        .config('spark.ui.port', '0') \
-        .config("spark.sql.warehouse.dir", f"/user/{username}/warehouse") \
-        .config('spark.shuffle.useOldFetchProtocol', 'true') \
+        .config(conf=spark_conf) \
         .enableHiveSupport() \
         .getOrCreate()
