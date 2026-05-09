@@ -49,3 +49,14 @@ loan_clean_schema = StructType([
     StructField("loan_purpose", StringType(), True),
     StructField("loan_title", StringType(), True)
 ])
+
+loans_repay_schema = StructType([
+    StructField("loan_id", StringType(), True),
+    StructField("total_principal_received", FloatType(), True),
+    StructField("total_interest_received", FloatType(), True),
+    StructField("total_late_fee_received", FloatType(), True),
+    StructField("total_payment_received", FloatType(), True),
+    StructField("last_payment_amount", FloatType(), True),
+    StructField("last_payment_date", StringType(), True),
+    StructField("next_payment_date", StringType(), True)
+])
