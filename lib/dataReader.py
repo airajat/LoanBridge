@@ -1,5 +1,5 @@
 from lib.configReader import get_app_config
-from lib.schemas import customer_schema, loan_raw_schema, loans_repay_schema
+from lib.schemas import customer_schema, loan_raw_schema, raw_loans_repay_schema
 
 def read_customers(spark, env):
     conf = get_app_config(env)
@@ -15,7 +15,6 @@ def read_loans(spark, env):
     conf = get_app_config(env)
     loan_file_path = conf["loan.obj.path"]
 
-    # Uses the raw schema with 'loan_amnt', 'term', etc.
     raw_df = spark.read \
         .format("csv") \
         .option("header", "true") \
@@ -36,8 +35,17 @@ def read_loans_repayments(spark, env):
     conf = get_app_config(env)
     loans_repayments_file_path = conf["loanrepayments.obj.path"]
     
-    return spark.read \
+    loans_repayments_df = spark.read \
         .format("csv") \
         .option("header", "true") \
-        .schema(loans_repay_schema) \
+        .schema(raw_loans_repay_schema) \
         .load(loans_repayments_file_path)
+    
+    return loans_repayments_df.withColumnRenamed("total_rec_prncp", "total_principal_received") \
+                               .withColumnRenamed("total_rec_int", "total_interest_received") \
+                               .withColumnRenamed("total_rec_late_fee", "total_late_fee_received") \
+                               .withColumnRenamed("total_pymnt", "total_payment_received") \
+                               .withColumnRenamed("last_pymnt_amnt", "last_payment_amount") \
+                               .withColumnRenamed("last_pymnt_d", "last_payment_date") \
+                               .withColumnRenamed("next_pymnt_d", "next_payment_date")
+
