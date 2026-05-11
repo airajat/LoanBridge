@@ -1,4 +1,7 @@
 from pyspark.sql.functions import current_timestamp, regexp_replace, col, when, length, floor, avg, lit
+from functools import reduce
+from operator import or_
+
 
 def clean_customer_data(df):
     # 1. Basic Formatting & Metadata
@@ -58,3 +61,38 @@ def clean_loans_data(df):
     final_loans_df = loans_term_modified_df.withColumn("loan_purpose", when(col("loan_purpose").isin(loan_purpose_lookup), col("loan_purpose")).otherwise("other"))
     
     return final_loans_df, bad_loans_df
+
+def clean_repayments_data(df):
+    # 1. Add ingestion metadata
+    df_ingest_date = df.withColumn("ingest_date", current_timestamp())
+
+    # 2. Define quality gate (critical columns)
+    columns_to_check = ["total_principal_received", "total_interest_received", 
+                        "total_late_fee_received", "total_payment_received", "last_payment_amount"]
+    # Create a dynamic filter that checks if ANY column in the list is null
+    null_condition = reduce(or_, [col(c).isNull() for c in columns_to_check])
+    
+    # Capture the rejects (Anything that has a null in our list)
+    bad_repayments_df = df_ingest_date.filter(null_condition) \
+        .withColumn("reject_reason", lit(f"Null values detected in one of: {columns_to_check}"))
+    
+    # Capture the good data
+    good_repayments_df = df_ingest_date.na.drop(subset=columns_to_check)
+
+    # fixing total_payment_received calculation
+    fixed_payments_df = good_repayments_df.withColumn(
+        "total_payment_received",
+        when(
+            (col("total_principal_received") != 0.0) & (col("total_payment_received") == 0.0),
+            col("total_principal_received") + col("total_interest_received") + col("total_late_fee_received")
+        ).otherwise(col("total_payment_received"))
+    )
+    
+    # 4. Filter 0.0 payments and clean date strings
+    final_df = fixed_payments_df.filter("total_payment_received != 0.0") \
+        .withColumn("last_payment_date", 
+                    when(col("last_payment_date") == "0.0", None).otherwise(col("last_payment_date"))) \
+        .withColumn("next_payment_date", 
+                    when(col("next_payment_date") == "0.0", None).otherwise(col("next_payment_date")))
+        
+    return final_df, bad_repayments_df
