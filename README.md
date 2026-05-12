@@ -1,53 +1,54 @@
-#LoanBridge Data Engineering Pipeline
+LoanBridge Data Engineering Pipeline
 
-##Project Overview
-This project is an industrial-grade PySpark ETL (Extract, Transform, Load) pipeline designed to process LendingClub loan and customer data. The pipeline ingests raw data from HDFS, applies rigorous cleaning and business transformation logic, and persists the results into a Silver Layer (Parquet) while segregating "Bad Data" for further audit.
+Project Overview:
 
-##Tech Stack
+LoanBridge is an industrial-grade PySpark ETL pipeline designed to ingest, clean, and transform LendingClub financial data. 
+The system implements a Medallion Architecture, migrating raw CSV data (Bronze) into a strictly typed, optimized Parquet format (Silver).
+
+Data Architecture & Lineage:
+
+The pipeline follows a structured path to ensure data integrity and auditability:
+
+    Bronze Layer: Raw CSV ingestion from HDFS with enforced schemas.
+
+    Transformation Engine: Business logic application, null handling, and data sanitization.
+    
+    Silver Layer: Cleaned data persisted as Snappy-compressed Parquet for downstream analytics.
+    
+    Error Zone: Quality-checked "Bad Data" segregated for reconciliation and debugging.
+
+TechStack
+
+Engine: PySpark (Spark 3.x) on YARN
 Language: Python 3.11
-Framework: PySpark (Spark 3.x)
-Environment Management: Pipenv
-Testing: Pytest
-Cluster Manager: YARN (ITVersity Cluster)
-Storage Format: Apache Parquet
+Env Management: Pipenv (Virtual Environments)
+Testing: Pytest (Automated Unit Testing)
+Storage: HDFS & Apache Parquet
 
-##Key Features
-Centralised Schema Management: Utilises StructType definitions in lib/schemas.py to enforce strict data typing across the entire pipeline.
-Unified Error Handling: Both Loan and Customer datasets implement a "Reject Logic" framework. Records failing critical quality checks are saved to a dedicated error/ path with reason codes.
-Complex Transformations:
-Standardising loan terms (months to years).
-Mapping and fallback logic for loan purposes.
-Statistical imputation for missing employment lengths.
-Robust Testing: A comprehensive unit test suite that simulates Spark environments locally using pytest.
+Key Features
 
-Local Development & Testing
-1. Setup Environment
-Ensure you have Pipenv installed, then run:
-pipenv install
+Strict Schema Enforcement: Centralized StructType definitions in lib/schemas.py eliminate data type drift.
+Unified Reject Framework: Consistent logic across all datasets captures and logs rejected records with specific reason codes.
+Complex Business Logic:
+    Customers: Statistical imputation of employment length and address cleaning.
+    Loans: Normalization of loan terms and categorization of loan purposes.
+    Repayments: Dynamic recalculation of total_payment_received and sanitization of legacy "0.0" date strings.
+    
+Automated Reconciliation: Every run generates a "Data Balance Sheet" in the logs, comparing Input vs. Output vs. Rejects.
 
-2. Running Unit Tests
-To run the transformation tests without version mismatch issues:
-pipenv run pytest -v
 
-Note: The tests/conftest.py is configured to automatically align the Spark worker version with your local Python executable.
+Execution Guide
+1. Local Testing    
+    pipenv install
+    pipenv run pytest -v
+2. Cluster Deployment (YARN)
+    Package the library
+    zip -r dependencies.zip lib/ logger.py
 
-Production Deployment (ITVersity Cluster)
-Follow these steps to deploy and execute the pipeline on the YARN cluster.
-1. Package Dependencies
-Zip the library files and utility scripts for Spark distribution:
+# Deploy to Gateway
+scp application_main.py dependencies.zip configs/*.conf <user>@g01.itversity.com:~/
 
-zip -r dependencies.zip lib/ logger.py
-
-2. Deploy Artifact to Gateway
-Upload the main script, dependencies, and configurations to the gateway node:
-scp application_main.py dependencies.zip configs/*.conf <your_user>@g01.itversity.com:~/
-
-3. Submit to YARN
-Execute the job in client mode:
-
-export PYSPARK_PYTHON=python3
-export PYSPARK_DRIVER_PYTHON=python3
-
+# Submit Job (DEV mode)
 spark-submit \
     --master yarn \
     --deploy-mode client \
@@ -55,21 +56,17 @@ spark-submit \
     --files application.conf,pyspark.conf \
     application_main.py DEV
 
-Project Structure
-Plaintext
-
-LoanBridge/
-├── application_main.py      # Entry point for the Spark job
+Project StructurePlaintextLoanBridge/
+├── application_main.py      # Job Orchestrator
 ├── lib/
-│   ├── dataReader.py        # Logic for reading raw data (CSV/Parquet)
-│   ├── dataManipulation.py  # Core transformation and cleaning logic
-│   └── schemas.py           # Centralized StructType definitions
-├── tests/
-│   ├── conftest.py          # PySpark test fixtures and env config
-│   └── test_transform.py    # Unit tests for transformations
-├── configs/
-│   └── application.conf     # Environment-specific paths and settings
-├── dependencies.zip         # Packaged lib for cluster execution
-└── README.md                # Project documentation
+│   ├── dataReader.py        # Bronze Ingestion Logic
+│   ├── dataManipulation.py  # Silver Transformation Logic
+│   └── schemas.py           # Centralized Source of Truth for Data Types
+├── tests/                   # Pytest Suite
+├── configs/                 # Environment-specific (LOCAL/DEV/PROD)
+└── README.md                # Technical Documentation
 
-Data Quality Summary
+
+Data Quality Summary (Silver Layer)
+Dataset      IngestionFormat  OutputFormat         Success Path (Silver)   Reject Path (Error)
+Customers         CSV        Parquet              /.../silver/customers         /.../error/customersLoans    CSV        Parquet              /.../silver/loans             /.../error/loansRepayments   CSV        Parquet              /.../silver/loanrepayments    /.../error/
