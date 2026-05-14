@@ -2,7 +2,6 @@ from pyspark.sql.functions import current_timestamp, regexp_replace, col, when, 
 from functools import reduce
 from operator import or_
 
-
 def clean_customer_data(df):
     # 1. Basic Formatting & Metadata
     renamed_df = df.withColumnRenamed("annual_inc", "annual_income") \
@@ -97,7 +96,6 @@ def clean_repayments_data(df):
         
     return final_df, bad_repayments_df
 
-from pyspark.sql.functions import col, current_timestamp
 
 def clean_defaulters_data(df):
     # 1. Ingestion Date
