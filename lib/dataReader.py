@@ -1,5 +1,5 @@
 from lib.configReader import get_app_config
-from lib.schemas import customer_schema, loan_raw_schema, raw_loans_repay_schema
+from lib.schemas import customer_schema, loan_raw_schema, raw_loans_repay_schema, loan_defaulters_schema
 
 def read_customers(spark, env):
     conf = get_app_config(env)
@@ -49,3 +49,11 @@ def read_loans_repayments(spark, env):
                                .withColumnRenamed("last_pymnt_d", "last_payment_date") \
                                .withColumnRenamed("next_pymnt_d", "next_payment_date")
 
+def read_defaulters(spark, env):
+    conf = get_app_config(env)
+    defaulters_file_path = conf["defaulters.obj.path"]
+    return spark.read \
+        .format("csv") \
+        .option("header", "true") \
+        .schema(loan_defaulters_schema) \
+        .load(defaulters_file_path)

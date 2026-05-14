@@ -14,7 +14,6 @@ def test_emp_length_imputation(spark):
     good_df, bad_df = dataManipulation.clean_customer_data(df)
     results = good_df.collect()
     
-    # Asserting that the mean (10) was filled into the 3rd row
     assert results[2]["emp_length"] == 10
     assert bad_df.count() == 0
 
@@ -55,13 +54,44 @@ def test_loan_rejects_logic(spark):
     (None, None)
 ])
 def test_loan_purpose_logic(spark, raw_purpose, expected_purpose):
-    # We use the clean schema to ensure Spark knows the types for 'None' values
     test_data = [("101", "1", 1000.0, 1000.0, "36 months", 0.1, 100.0, "2024-01-01", "Paid", raw_purpose, "Some Title")]
     df = spark.createDataFrame(test_data, schema=loan_clean_schema)
-
     success_df, error_df = dataManipulation.clean_loans_data(df)
 
     if raw_purpose is None:
         assert error_df.count() == 1
     else:
         assert success_df.collect()[0]["loan_purpose"] == expected_purpose
+
+@pytest.mark.transformation
+def test_defaulters_delinq_filter(spark, loan_defaulters_schema):
+    """
+    Tests that only members with delinquency are captured in the delinq stream.
+    """
+    test_data = [
+        ("M1", 2.0, 500.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0), # Has delinq_2yrs
+        ("M2", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 12.0, 0.0), # Has mths_since_last_delinq
+        ("M3", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)   # Clean - should be filtered
+    ]
+    df = spark.createDataFrame(test_data, schema=loan_defaulters_schema)
+    delinq_df, _ = dataManipulation.clean_defaulters_data(df)
+    
+    assert delinq_df.count() == 2
+    # Check if the float was cast to Integer as per business logic
+    assert [field.dataType.simpleString() for field in delinq_df.schema if field.name == "delinq_2yrs"][0] == "int"
+
+@pytest.mark.transformation
+def test_defaulters_records_enq_filter(spark, loan_defaulters_schema):
+    """
+    Tests that members with public records or inquiries are captured in the enq stream.
+    """
+    test_data = [
+        ("M1", 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0), # Public Record Bankruptcies
+        ("M2", 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0), # Public Records
+        ("M3", 0.0, 0.0, 0.0, 0.0, 3.0, 0.0, 0.0, 0.0), # Inquiries last 6m
+        ("M4", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)  # Clean
+    ]
+    df = spark.createDataFrame(test_data, schema=loan_defaulters_schema)
+    _, enq_df = dataManipulation.clean_defaulters_data(df)
+    
+    assert enq_df.count() == 3

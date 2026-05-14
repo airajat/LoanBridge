@@ -2,14 +2,13 @@ import pytest
 import os
 import sys
 from pyspark.sql import SparkSession
+from lib.schemas import loan_defaulters_schema as lds
 
 @pytest.fixture(scope="session")
 def spark():
     """
     Creates a shared SparkSession for all tests.
-    Uses the current Python executable to prevent version mismatches.
     """
-    # Force Spark to use the exact Python binary running pytest
     os.environ['PYSPARK_PYTHON'] = sys.executable
     os.environ['PYSPARK_DRIVER_PYTHON'] = sys.executable
 
@@ -22,6 +21,11 @@ def spark():
         .getOrCreate()
         
     yield spark_session
-    
-    # Proper teardown
     spark_session.stop()
+
+@pytest.fixture(scope="session")
+def loan_defaulters_schema():
+    """
+    Provides the Defaulters Schema as a reusable fixture.
+    """
+    return lds

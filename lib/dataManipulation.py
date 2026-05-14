@@ -2,7 +2,6 @@ from pyspark.sql.functions import current_timestamp, regexp_replace, col, when, 
 from functools import reduce
 from operator import or_
 
-
 def clean_customer_data(df):
     # 1. Basic Formatting & Metadata
     renamed_df = df.withColumnRenamed("annual_inc", "annual_income") \
@@ -96,3 +95,32 @@ def clean_repayments_data(df):
                     when(col("next_payment_date") == "0.0", None).otherwise(col("next_payment_date")))
         
     return final_df, bad_repayments_df
+
+
+def clean_defaulters_data(df):
+    # 1. Ingestion Date
+    df_ingested = df.withColumn("ingest_date", current_timestamp())
+    
+    # 2. Data Type Correction & Null Handling
+    # Converting float to int and filling nulls with 0 for delinq_2yrs
+    processed_df = df_ingested.withColumn("delinq_2yrs", col("delinq_2yrs").cast("integer")) \
+                              .fillna(0, subset=["delinq_2yrs"])
+    
+    # 3. Stream A: Delinquency Data
+    # Filter: Members with historical delinquency or current delinquency amounts
+    delinq_df = processed_df.filter(
+        (col("delinq_2yrs") > 0) | (col("mths_since_last_delinq") > 0)
+    ).select(
+        "member_id", "delinq_2yrs", "delinq_amnt", 
+        col("mths_since_last_delinq").cast("integer").alias("mths_since_last_delinq")
+    )
+    
+    # 4. Stream B: Public Records / Enquiry Data
+    # Filter: Members with public records, bankruptcies, or recent enquiries
+    records_enq_df = processed_df.filter(
+        (col("pub_rec") > 0.0) | 
+        (col("pub_rec_bankruptcies") > 0.0) | 
+        (col("inq_last_6mths") > 0.0)
+    ).select("member_id")
+    
+    return delinq_df, records_enq_df

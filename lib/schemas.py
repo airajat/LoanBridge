@@ -71,3 +71,15 @@ loans_repay_schema = StructType([
     StructField("last_payment_date", StringType(), True),
     StructField("next_payment_date", StringType(), True)
 ])
+
+loan_defaulters_schema = StructType([
+    StructField("member_id", StringType(), True),
+    StructField("delinq_2yrs", FloatType(), True),
+    StructField("delinq_amnt", FloatType(), True),
+    StructField("pub_rec", FloatType(), True),
+    StructField("pub_rec_bankruptcies", FloatType(), True),
+    StructField("inq_last_6mths", FloatType(), True),
+    StructField("total_rec_late_fee", FloatType(), True),
+    StructField("mths_since_last_delinq", FloatType(), True),
+    StructField("mths_since_last_record", FloatType(), True)
+])
