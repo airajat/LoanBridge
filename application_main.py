@@ -66,7 +66,6 @@ if __name__ == '__main__':
 
     # Split into Delinquency and Public Records/Enquiry streams
     delinq_df, records_enq_df = dataManipulation.clean_defaulters_data(raw_def_df)
-    
     count_delinq = delinq_df.count()
     count_enq = records_enq_df.count()
 

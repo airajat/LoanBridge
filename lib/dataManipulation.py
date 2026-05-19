@@ -98,16 +98,23 @@ def clean_repayments_data(df):
 
 
 def clean_defaulters_data(df):
+    """
+    Silver Layer Transformer for Defaulters:
+    Bifurcates the raw source into two optimised domain streams.
+    Stream B extracts ALL records with missing metrics imputed to 0.
+    """
     # 1. Ingestion Date
     df_ingested = df.withColumn("ingest_date", current_timestamp())
     
     # 2. Data Type Correction & Null Handling
-    # Converting float to int and filling nulls with 0 for delinq_2yrs
-    processed_df = df_ingested.withColumn("delinq_2yrs", col("delinq_2yrs").cast("integer")) \
-                              .fillna(0, subset=["delinq_2yrs"])
+    processed_df = df_ingested \
+        .withColumn("delinq_2yrs", col("delinq_2yrs").cast("integer")) \
+        .withColumn("pub_rec", col("pub_rec").cast("integer")) \
+        .withColumn("pub_rec_bankruptcies", col("pub_rec_bankruptcies").cast("integer")) \
+        .withColumn("inq_last_6mths", col("inq_last_6mths").cast("integer")) \
+        .na.fill(0, subset=["delinq_2yrs", "pub_rec", "pub_rec_bankruptcies", "inq_last_6mths"])
     
     # 3. Stream A: Delinquency Data
-    # Filter: Members with historical delinquency or current delinquency amounts
     delinq_df = processed_df.filter(
         (col("delinq_2yrs") > 0) | (col("mths_since_last_delinq") > 0)
     ).select(
@@ -116,11 +123,11 @@ def clean_defaulters_data(df):
     )
     
     # 4. Stream B: Public Records / Enquiry Data
-    # Filter: Members with public records, bankruptcies, or recent enquiries
-    records_enq_df = processed_df.filter(
-        (col("pub_rec") > 0.0) | 
-        (col("pub_rec_bankruptcies") > 0.0) | 
-        (col("inq_last_6mths") > 0.0)
-    ).select("member_id")
+    records_enq_df = processed_df.select(
+        "member_id",
+        "pub_rec",
+        "pub_rec_bankruptcies",
+        "inq_last_6mths"
+    )
     
     return delinq_df, records_enq_df
