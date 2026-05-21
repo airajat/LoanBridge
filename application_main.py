@@ -22,6 +22,7 @@ if __name__ == '__main__':
     total_cust = raw_customers_df.count()
     
     cleaned_customers_df, rejected_customers_df = dataManipulation.clean_customer_data(raw_customers_df)
+    
     success_cust = cleaned_customers_df.count()
     bad_cust = rejected_customers_df.count()
 
@@ -36,6 +37,7 @@ if __name__ == '__main__':
     total_loans = raw_loans_df.count()
     
     cleaned_loans_df, rejected_loans_df = dataManipulation.clean_loans_data(raw_loans_df)
+
     success_loans = cleaned_loans_df.count()
     bad_loans = rejected_loans_df.count()
 
@@ -50,15 +52,15 @@ if __name__ == '__main__':
     total_repay = raw_repay_df.count()
     
     cleaned_repay_df, rejected_repay_df = dataManipulation.clean_repayments_data(raw_repay_df)
+
     success_repay = cleaned_repay_df.count()
     bad_repay = rejected_repay_df.count()
 
     cleaned_repay_df.write.mode("overwrite").parquet(app_conf["loanrepayments.output.path"])
     rejected_repay_df.coalesce(1).write.mode("overwrite").parquet(app_conf["loanrepayments.reject.path"])
 
-
-# ==========================================
-    # PROCESS DEFAULTERS (SPLIT-FLOW)
+    # ==========================================
+    # PROCESS DEFAULTERS
     # ==========================================
     logger.info("Processing Loan Defaulters Data...")
     raw_def_df = dataReader.read_defaulters(spark, job_run_env)
@@ -66,13 +68,12 @@ if __name__ == '__main__':
 
     # Split into Delinquency and Public Records/Enquiry streams
     delinq_df, records_enq_df = dataManipulation.clean_defaulters_data(raw_def_df)
-    
     count_delinq = delinq_df.count()
     count_enq = records_enq_df.count()
 
     delinq_df.write.mode("overwrite").parquet(app_conf["defaulters.delinq.output.path"])
     records_enq_df.write.mode("overwrite").parquet(app_conf["defaulters.enq.output.path"])
-
+    
     # ==========================================
     # FINAL RECONCILIATION SUMMARY
     # ==========================================
@@ -83,7 +84,6 @@ if __name__ == '__main__':
     logger.info(f"REPAYMENTS: Total={total_repay} | Success={success_repay} | Rejected={bad_repay}")
     logger.info(f"DEFAULTERS: Total={total_def} | Delinq={count_delinq} | Rec/Enq={count_enq}")
     
-    # Audit for Data Integrity
     if (success_cust + bad_cust) != total_cust:
         logger.warn("WARNING: Customer count mismatch!")
     if (success_loans + bad_loans) != total_loans:
@@ -91,6 +91,5 @@ if __name__ == '__main__':
     if (success_repay + bad_repay) != total_repay:
         logger.warn("WARNING: Repayments count mismatch!")
     
-    # Note: Defaulters use business filters, so Total != (Delinq + Rec/Enq)
     logger.info("**********************************************")
     logger.info("LoanBridge Job successfully completed.")

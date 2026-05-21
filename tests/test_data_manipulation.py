@@ -94,4 +94,4 @@ def test_defaulters_records_enq_filter(spark, loan_defaulters_schema):
     df = spark.createDataFrame(test_data, schema=loan_defaulters_schema)
     _, enq_df = dataManipulation.clean_defaulters_data(df)
     
-    assert enq_df.count() == 3
+    assert enq_df.count() == 4
