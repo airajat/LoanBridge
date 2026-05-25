@@ -1,5 +1,7 @@
 import pytest
-from lib import dataManipulation
+from pyspark.sql import Row
+from lib import dataManipulation, goldProcessing
+from pyspark.sql.types import StructType, StructField, StringType, FloatType, IntegerType
 from lib.schemas import loan_clean_schema, customer_schema
 
 @pytest.mark.transformation
