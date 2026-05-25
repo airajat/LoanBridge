@@ -10,7 +10,7 @@ def get_spark_session(env):
     
     spark_conf = SparkConf()
     for key, val in conf_dict.items():
-        spark_conf.set(key, val)
+        spark_conf.set(key, str(val))
     
     # Environment-specific dynamic overrides
     if env != "LOCAL":
