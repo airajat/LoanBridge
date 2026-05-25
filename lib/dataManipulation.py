@@ -1,6 +1,10 @@
 from pyspark.sql.functions import current_timestamp, regexp_replace, col, when, length, floor, avg, lit
 from functools import reduce
 from operator import or_
+import logging
+
+# Initialise logger for tracking job execution
+logger = logging.getLogger(__name__)
 
 def clean_customer_data(df):
     # 1. Basic Formatting & Metadata
@@ -26,8 +30,11 @@ def clean_customer_data(df):
                                       .withColumn("emp_length", col("emp_length").cast("int"))
     
     # Fill Null Employment Length with Mean
-    avg_val = cleaned_emp_df.select(floor(avg("emp_length"))).collect()[0][0]
-    final_emp_df = cleaned_emp_df.na.fill(avg_val, subset=['emp_length'])
+    avg_df = cleaned_emp_df.select(floor(avg("emp_length")).alias("avg_emp_len"))
+    final_emp_df = cleaned_emp_df.crossJoin(avg_df) \
+        .withColumn("emp_length", when(col("emp_length").isNull(), col("avg_emp_len")).otherwise(col("emp_length"))) \
+        .drop("avg_emp_len")
+    # -------------------------------------------------------------------------
 
     # 5. Final State Validation
     final_df = final_emp_df.withColumn(
@@ -54,7 +61,7 @@ def clean_loans_data(df):
     loans_term_modified_df = success_loans_df.withColumn("loan_term_years", (regexp_replace(col("loan_term_months"), " months", "").cast("int") / 12).cast("int")) \
            .drop("loan_term_months")
     
-    # 4. Standardize Purpose
+    # 4. Standardise Purpose
     loan_purpose_lookup = ["debt_consolidation", "credit_card", "home_improvement", "other", "major_purchase", "medical", "small_business", "car", "vacation", "moving", "house", "wedding", "renewable_energy", "educational"]
     
     final_loans_df = loans_term_modified_df.withColumn("loan_purpose", when(col("loan_purpose").isin(loan_purpose_lookup), col("loan_purpose")).otherwise("other"))
@@ -131,3 +138,44 @@ def clean_defaulters_data(df):
     )
     
     return delinq_df, records_enq_df
+
+
+def generate_consolidated_bad_members(spark, database):
+    """
+    Scans the Silver tables for internal duplicate record mutations on member_id.
+    Consolidates the duplicate keys into an atomic DataFrame used for Gold-tier
+    anti-joins to maintain transaction-level accuracy.
+    """
+    logger.info("Executing row-duplication integrity checks across core Silver tables...")
+    
+    # Identify duplicate member IDs within the customers dataset
+    bad_cust = spark.sql(f"""
+        SELECT member_id FROM (
+            SELECT member_id, count(*) as total 
+            FROM {database}.customers GROUP BY member_id HAVING total > 1
+        )
+    """)
+    
+    # Identify duplicate member IDs within the delinquencies dataset
+    bad_delinq = spark.sql(f"""
+        SELECT member_id FROM (
+            SELECT member_id, count(*) as total 
+            FROM {database}.loans_defaulters_delinq GROUP BY member_id HAVING total > 1
+        )
+    """)
+    
+    # Identify duplicate member IDs within the public records / enquiry dataset
+    bad_enq = spark.sql(f"""
+        SELECT member_id FROM (
+            SELECT member_id, count(*) as total 
+            FROM {database}.loans_defaulters_detail_rec_enq GROUP BY member_id HAVING total > 1
+        )
+    """)
+    
+    # Consolidate, remove any cross-table overlaps, and output the distinct exclusion list
+    consolidated_bad_df = bad_cust.select("member_id") \
+        .union(bad_delinq.select("member_id")) \
+        .union(bad_enq.select("member_id")) \
+        .distinct()
+        
+    return consolidated_bad_df
