@@ -62,15 +62,15 @@ Follow these exact steps to compile dependencies, synchronize edge configuration
     Securely transfer deployment bundles, application modules, and production configuration layouts to your authenticated cluster workspace:
 
     # Upload application dependencies and main file
-    scp dependencies.zip application_main.py itv025566@g01.itversity.com:/home/itv025566/ 
+    scp dependencies.zip application_main.py <user>@g01.itversity.com:/home/<user>/ 
 
     # Upload configuration profiles
-    scp configs/*.conf itv025566@g01.itversity.com:/home/itv025566/
+    scp configs/*.conf <user>@g01.itversity.com:/home/<user>/
 
 4. Provision the Hive Metastore Database
     Establish a secure SSH handshake to the cluster node edge terminal:
     
-    ssh itv025566@g01.itversity.com
+    ssh user@g01.itversity.com
 
     Initialise your database namespace instance inside the central catalog, routing the physical storage metadata path explicitly into your authorized storage block:
 
