@@ -70,7 +70,7 @@ Follow these exact steps to compile dependencies, synchronize edge configuration
 4. Provision the Hive Metastore Database
     Establish a secure SSH handshake to the cluster node edge terminal:
     
-    ssh user@g01.itversity.com
+    ssh <user>@g01.itversity.com
 
     Initialise your database namespace instance inside the central catalog, routing the physical storage metadata path explicitly into your authorized storage block:
 
